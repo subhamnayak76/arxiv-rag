@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from src.routers import hybrid_search
 from src.routers import health
 from src.routers import search
 
@@ -32,6 +32,7 @@ app.add_middleware(
 # ── routers ──────────────────────────────
 app.include_router(health.router, tags=["health"])
 app.include_router(search.router)
+app.include_router(hybrid_search.router)
 
 if __name__ == "__main__":
     import uvicorn
