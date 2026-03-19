@@ -4,14 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.routers import health
-
+from src.routers import search
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print(" Starting arXiv RAG API...")
+    print("Starting arXiv RAG API...")
+    from src.services.qdrant.client import qdrant_service
+    qdrant_service.create_collection()
     yield
     print("Shutting down arXiv RAG API...")
-
 
 app = FastAPI(
     title="arXiv Paper Curator",
@@ -30,7 +31,7 @@ app.add_middleware(
 
 # ── routers ──────────────────────────────
 app.include_router(health.router, tags=["health"])
-
+app.include_router(search.router)
 
 if __name__ == "__main__":
     import uvicorn
