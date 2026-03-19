@@ -1,0 +1,27 @@
+# environment
+.env
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# virtual env
+.venv/
+
+# uv
+uv.lock
+
+# airflow
+airflow/logs/
+airflow/plugins/
+
+# notebooks
+.ipynb_checkpoints/
+
+# misc
+*.db
+*.log
