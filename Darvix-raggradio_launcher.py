@@ -25,10 +25,10 @@ def ask_question(question: str, mode: str, top_k: int) -> tuple:
             sources_text = "**Sources:**\n"
             for s in sources:
                 authors = ", ".join(s.get("authors", [])[:2])
-                sources_text += f"- [{s['arxiv_id']}] {s['title']} — {authors}\n"
+                sources_text += f"- [{s['arxiv_id']}] {s['title']} - {authors}\n"
 
         if from_cache:
-            answer = "(cached)\n\n" + answer
+            answer = "cached\n\n" + answer
 
         return answer, sources_text
 
@@ -38,7 +38,7 @@ def ask_question(question: str, mode: str, top_k: int) -> tuple:
 
 with gr.Blocks(title="arXiv Paper Curator") as demo:
 
-    gr.Markdown("# 📄 arXiv Paper Curator\nAsk questions about the latest AI/ML research papers.")
+    gr.Markdown("# arXiv Paper Curator\nAsk questions about the latest AI/ML research papers.")
 
     with gr.Row():
         with gr.Column(scale=3):
@@ -73,7 +73,7 @@ with gr.Blocks(title="arXiv Paper Curator") as demo:
 if __name__ == "__main__":
     demo.launch(
         server_port=7861,
-        server_name="127.0.0.1",
+        server_name="0.0.0.0",
         share=False,
-        
+        theme=gr.themes.Soft(),
     )
