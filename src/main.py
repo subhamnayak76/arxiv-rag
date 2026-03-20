@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.routers import hybrid_search
 from src.routers import health
 from src.routers import search
-
+from src.routers import ask
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting arXiv RAG API...")
@@ -33,7 +33,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["health"])
 app.include_router(search.router)
 app.include_router(hybrid_search.router)
-
+app.include_router(ask.router)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("src.main:app", host="0.0.0.0", port=8000, reload=True)
