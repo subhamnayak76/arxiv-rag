@@ -1,6 +1,6 @@
 # arXiv Paper Curator — Production RAG System
 
-
+![arXiv Paper Curator Demo](static/demo.png)
 
 A production-grade Retrieval-Augmented Generation (RAG) system that automatically ingests arXiv research papers daily and answers questions about them using hybrid search and a Groq LLM.
 
