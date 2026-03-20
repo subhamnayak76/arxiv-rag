@@ -37,8 +37,7 @@ dependencies = [
     "redis>=5.0.0",
 
     # Observability
-    "langfuse>=2.36.0",
-
+    "langfuse>=2.36.0,<3.0.0",
     # UI
     "gradio>=4.36.0",
 

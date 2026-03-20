@@ -6,13 +6,17 @@ from src.routers import hybrid_search
 from src.routers import health
 from src.routers import search
 from src.routers import ask
+from src.services.observability.tracing import setup_tracing
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting arXiv RAG API...")
+    setup_tracing()
     from src.services.qdrant.client import qdrant_service
     qdrant_service.create_collection()
     yield
     print("Shutting down arXiv RAG API...")
+
 
 app = FastAPI(
     title="arXiv Paper Curator",

@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 
+from src.services.cache.redis import cache_service
 from src.services.embeddings.jina import jina_service
 from src.services.groq.client import groq_service
 from src.services.qdrant.client import qdrant_service
@@ -25,7 +26,7 @@ Answer:"""
 
 
 class RAGPipeline:
-    """Orchestrates retrieval and generation for RAG."""
+    """Orchestrates retrieval and generation for RAG with caching."""
 
     async def ask(
         self,
@@ -34,20 +35,15 @@ class RAGPipeline:
         top_k: int = 5,
         mode: str = "hybrid",
     ) -> Dict[str, Any]:
-        """
-        Answer a question using RAG.
+        """Answer a question using RAG with caching."""
 
-        Args:
-            question: User question
-            session: Database session
-            top_k: Number of chunks to retrieve
-            mode: Search mode (hybrid, semantic, keyword)
+        # check cache first
+        cached = cache_service.get(question, mode)
+        if cached:
+            cached["from_cache"] = True
+            return cached
 
-        Returns:
-            Dict with answer and sources
-        """
-
-        # step 1 — retrieve relevant chunks
+        # retrieve chunks
         chunks = await self._retrieve(question, session, top_k, mode)
 
         if not chunks:
@@ -55,28 +51,32 @@ class RAGPipeline:
                 "answer": "I could not find any relevant papers to answer your question.",
                 "sources": [],
                 "chunks_used": 0,
+                "from_cache": False,
             }
 
-        # step 2 — build context from chunks
+        # build context and prompt
         context = self._build_context(chunks)
-
-        # step 3 — build prompt
         prompt = RAG_PROMPT_TEMPLATE.format(
             context=context,
             question=question,
         )
 
-        # step 4 — generate answer
+        # generate answer
         answer = await groq_service.generate(prompt)
 
-        # step 5 — extract unique sources
+        # build result
         sources = self._extract_sources(chunks)
-
-        return {
+        result = {
             "answer": answer,
             "sources": sources,
             "chunks_used": len(chunks),
+            "from_cache": False,
         }
+
+        # cache result
+        cache_service.set(question, mode, result)
+
+        return result
 
     async def _retrieve(
         self,
@@ -91,7 +91,6 @@ class RAGPipeline:
             results = keyword_search_service.search(session, question, top_k)
             return [{"text": r["abstract"], **r} for r in results]
 
-        # get query embedding for semantic/hybrid
         query_vector = await jina_service.embed_query(question)
 
         hits = qdrant_service.client.query_points(
@@ -127,7 +126,7 @@ class RAGPipeline:
         return chunks[:top_k]
 
     def _build_context(self, chunks: List[Dict]) -> str:
-        """Format chunks into a context string for the prompt."""
+        """Format chunks into context string."""
         context_parts = []
         for i, chunk in enumerate(chunks, 1):
             context_parts.append(

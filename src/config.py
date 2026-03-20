@@ -41,6 +41,11 @@ class Settings(BaseSettings):
 
     # Telegram
     telegram_bot_token: str = ""
-
+    
+    # LangSmith
+    langchain_tracing_v2: str = "false"
+    langchain_api_key: str = ""
+    langchain_project: str = "rag"
+    langchain_endpoint: str = "https://api.smith.langchain.com"
 
 settings = Settings()
