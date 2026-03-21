@@ -1,26 +1,3 @@
-version: "3.9"
-
-x-airflow-common: &airflow-common
-  build:
-    context: ./airflow
-    dockerfile: Dockerfile
-  environment:
-    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
-  volumes:
-    - ./airflow/dags:/opt/airflow/dags
-    - airflow-logs:/opt/airflow/logs
-    - ./src:/opt/airflow/src
-
-  depends_on:
-    postgres:
-      condition: service_healthy
-  networks:
-    - rag-network
-
 services:
 
   postgres:
@@ -51,7 +28,6 @@ services:
       - "6334:6334"
     volumes:
       - qdrant-data:/qdrant/storage
-  
     networks:
       - rag-network
     restart: unless-stopped
@@ -72,53 +48,39 @@ services:
       - rag-network
     restart: unless-stopped
 
-  langfuse:
-    image: langfuse/langfuse:2
-    container_name: arxiv-langfuse
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/langfuse
-      NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET}
-      SALT: ${LANGFUSE_SALT}
+  airflow:
+    build:
+      context: ./airflow
+      dockerfile: Dockerfile
+    container_name: arxiv-airflow
+    command: bash /entrypoint.sh
     depends_on:
       postgres:
         condition: service_healthy
-    networks:
-      - rag-network
-    restart: unless-stopped
-
-  airflow-init:
-    <<: *airflow-common
-    container_name: arxiv-airflow-init
-    command: >
-      bash -c "airflow db migrate && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true"
-    restart: "no"
-
-  airflow-webserver:
-    <<: *airflow-common
-    container_name: arxiv-airflow-webserver
-    command: webserver
+    env_file:
+      - .env
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_SECRET_KEY}
+      AIRFLOW_ADMIN_USER: ${AIRFLOW_ADMIN_USER}
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - airflow-logs:/opt/airflow/logs
+      - ./src:/opt/airflow/src
     ports:
       - "8080:8080"
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
-    restart: unless-stopped
-
-  airflow-scheduler:
-    <<: *airflow-common
-    container_name: arxiv-airflow-scheduler
-    command: scheduler
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
+      retries: 3
+      start_period: 180s
+    networks:
+      - rag-network
     restart: unless-stopped
 
   app:
@@ -136,7 +98,6 @@ services:
       QDRANT_HOST: qdrant
       QDRANT_PORT: 6333
       REDIS_URL: redis://redis:6379
-      LANGFUSE_HOST: http://langfuse:3000
     depends_on:
       postgres:
         condition: service_healthy

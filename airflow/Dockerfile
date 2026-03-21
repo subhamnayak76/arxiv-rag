@@ -4,7 +4,11 @@ USER root
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
+    procps \
     && rm -rf /var/lib/apt/lists/*
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 USER airflow
 
